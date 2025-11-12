@@ -1,11 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O futuro do trabalho</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>O Futuro do Trabalho</title>
+    <link rel="stylesheet" href="src/css/estilo.css">
 </head>
 <body>
-    
+  <header class="hero">
+    <h1>O Futuro do Trabalho</h1>
+    <p>Conectando pessoas, competências e propósito por meio da tecnologia</p>
+  </header>
+
+  <section class="about">
+    <h2>Sobre o Projeto</h2>
+    <p>Inspirado no desafio Global Solution, este projeto propõe uma plataforma colaborativa que conecta profissionais e promove um futuro do trabalho mais justo, inclusivo e sustentável.</p>
+  </section>
+
+  <section class="profiles">
+    <h2>Profissionais em Destaque</h2>
+    <div class="cards-container" id="cardsContainer"></div>
+  </section>
+
+  <section class="quiz-section">
+    <h2>Quiz: O Futuro do Trabalho</h2>
+    <div id="quiz-container">
+      <p id="quiz-question"></p>
+      <div id="quiz-options"></div>
+      <button id="next-btn" class="btn">Próxima</button>
+      <p id="quiz-score"></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Desenvolvido por <strong>Murilo Jeronimo Ferreira Nunes</strong> e <strong>Bruno Santos Castilho</strong> — 2025</p>
+  </footer>
+
+  <!-- Modal de Detalhes -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
