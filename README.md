@@ -82,4 +82,4 @@ Inclusão e adaptação ao futuro do trabalho
 
 ⚡ Com os sensores e atuadores integrados, é possível simular condições reais de escritório mesmo em ambiente virtual como o Tinkercad, preparando para futuras implementações físicas.
 
-![Circuito SmartDesk 2050](imagem.png)
+![Circuito SmartDesk 2050](image.png)
