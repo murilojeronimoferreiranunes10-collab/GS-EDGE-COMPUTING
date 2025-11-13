@@ -1,97 +1,128 @@
 #include <Servo.h>
 
-#define LDR A0
-#define MQ135 A1
+// === PINOS ===
 #define TRIG 6
 #define ECHO 7
-#define LED_R 9
-#define LED_G 10
-#define LED_B 11
-#define BUZZER 12
+#define LDR A0
+#define LM35 A2
+#define BUZZER A3
+#define RED_PIN 9
+#define GREEN_PIN 10
+#define BLUE_PIN 11
 #define SERVO_PIN 3
-#define TEMP_PIN A2 // TMP36
 
-Servo servo;
+Servo servoMotor;
 
-unsigned long lastMoveTime = 0;
-bool userPresent = true;
+// === VARIÁVEIS GLOBAIS ===
+unsigned long startTime;
+int ldrMin = 1023;
+int ldrMax = 0;
+bool calibrated = false;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(LDR, INPUT);
-  pinMode(MQ135, INPUT);
+
   pinMode(TRIG, OUTPUT);
   pinMode(ECHO, INPUT);
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_G, OUTPUT);
-  pinMode(LED_B, OUTPUT);
+  pinMode(LDR, INPUT);
+  pinMode(LM35, INPUT);
   pinMode(BUZZER, OUTPUT);
-  pinMode(TEMP_PIN, INPUT);
-  servo.attach(SERVO_PIN);
-  servo.write(90); // posição neutra
-  Serial.println("=== SmartDesk 2050 Iniciado ===");
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  
+  servoMotor.attach(SERVO_PIN);
+
+  Serial.println("=== SMARTDESK 2050 ===");
+  Serial.println("Calibrando sensor de luz (6 segundos)...");
+  startTime = millis();
 }
 
-void loop() {
-  // --- Sensores ---
-  float temp = lerTemperatura();
-  int luz = analogRead(LDR);
-  int airQuality = analogRead(MQ135);
-
-  // --- Sensor ultrassônico (presença) ---
+float medirDistancia() {
   digitalWrite(TRIG, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
-  long duration = pulseIn(ECHO, HIGH);
-  float distance = duration * 0.034 / 2;
+  
+  float duracao = pulseIn(ECHO, HIGH);
+  float distancia = duracao * 0.034 / 2;
+  if (distancia <= 0 || distancia > 400) distancia = 0;
+  return distancia;
+}
 
-  if (distance < 50 && distance > 0) {
-    userPresent = true;
-    lastMoveTime = millis();
-  } else if (millis() - lastMoveTime > 30000) { // 30s sem presença
-    userPresent = false;
+void setRGB(int r, int g, int b) {
+  analogWrite(RED_PIN, r);
+  analogWrite(GREEN_PIN, g);
+  analogWrite(BLUE_PIN, b);
+}
+
+// === Função para ler e converter o LDR ===
+int lerLuzPorcentagem() {
+  int raw = analogRead(LDR);
+
+  // Durante a calibração inicial (6 s)
+  if (!calibrated) {
+    if (raw < ldrMin) ldrMin = raw;
+    if (raw > ldrMax) ldrMax = raw;
+    if (millis() - startTime > 6000) {
+      calibrated = true;
+      if (ldrMax == ldrMin) ldrMax = ldrMin + 1;
+      Serial.print("Calibracao concluida. Min=");
+      Serial.print(ldrMin);
+      Serial.print("  Max=");
+      Serial.println(ldrMax);
+    }
   }
 
-  // --- Exibir dados ---
-  Serial.print("Temp: "); Serial.print(temp);
-  Serial.print("°C | Luz: "); Serial.print(luz);
-  Serial.print(" | Ar: "); Serial.print(airQuality);
-  Serial.print(" | Presença: "); Serial.println(userPresent ? "Sim" : "Não");
+  // Mapeia para 0–100%
+  int pct = map(raw, ldrMin, ldrMax, 0, 100);
+  pct = constrain(pct, 0, 100);
 
-  // --- Condições ambientais ---
-  bool ambienteRuim = (temp > 30 || airQuality > 600);
-  bool poucaLuz = (luz < 300);
+  // Agrupa em 0, 50 ou 100
+  if (pct < 30) pct = 0;
+  else if (pct < 70) pct = 50;
+  else pct = 100;
 
-  // --- LED RGB ---
-  if (ambienteRuim) setColor(255, 0, 0);       // Vermelho = risco
-  else if (poucaLuz) setColor(255, 255, 0);    // Amarelo = pouca luz
-  else setColor(0, 255, 0);                    // Verde = ambiente normal
-
-  // --- Servo motor ---
-  if (poucaLuz) servo.write(120); // abre persiana / liga luz
-  else servo.write(60);           // fecha persiana / luz adequada
-
-  // --- Alertas sonoros ---
-  if (ambienteRuim) tone(BUZZER, 1000);
-  else if (!userPresent) tone(BUZZER, 700); // lembrete de pausa
-  else noTone(BUZZER);
-
-  delay(1000);
+  return pct;
 }
 
-// --- Função para ler TMP36 ---
-float lerTemperatura() {
-  int valor = analogRead(TEMP_PIN);
-  float tensao = valor * 5.0 / 1023.0;
-  float temperatura = (tensao - 0.5) * 100.0; // Conversão TMP36
-  return temperatura;
-}
+// === LOOP PRINCIPAL ===
+void loop() {
+  // Lê sensores
+  float distancia = medirDistancia();
+  int luzPct = lerLuzPorcentagem();
 
-// --- Controle do LED RGB ---
-void setColor(int r, int g, int b) {
-  analogWrite(LED_R, r);
-  analogWrite(LED_G, g);
-  analogWrite(LED_B, b);
+  int leituraLM35 = analogRead(LM35);
+  float temperatura = (leituraLM35 * 5.0 * 100.0) / 1023.0;
+
+  // Servo — abre se alguém perto (< 20 cm)
+  if (distancia > 0 && distancia < 20) servoMotor.write(90);
+  else servoMotor.write(0);
+
+  // RGB e buzzer
+  if (temperatura > 30) {
+    setRGB(255, 0, 0);  // Vermelho — quente
+    digitalWrite(BUZZER, HIGH);
+  } else if (luzPct == 0) {
+    setRGB(0, 0, 255);  // Azul — escuro
+    digitalWrite(BUZZER, LOW);
+  } else if (luzPct == 50) {
+    setRGB(255, 255, 0); // Amarelo — média luz
+    digitalWrite(BUZZER, LOW);
+  } else {
+    setRGB(0, 255, 0);  // Verde — luz alta
+    digitalWrite(BUZZER, LOW);
+  }
+
+  // Serial monitor
+  Serial.print("Dist: ");
+  Serial.print(distancia);
+  Serial.print(" cm  |  Temp: ");
+  Serial.print(temperatura, 1);
+  Serial.print(" C  |  Luz: ");
+  Serial.print(luzPct);
+  Serial.println("%");
+
+  delay(700);
 }

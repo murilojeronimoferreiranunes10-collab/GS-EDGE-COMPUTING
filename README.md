@@ -61,4 +61,4 @@ O projeto SmartDesk 2050 propõe uma abordagem sustentável e inteligente para o
 
 - Inclusão e adaptação ao futuro do trabalho
 
-![Circuito SmartDesk 2050](Imagem.png)
+![Circuito SmartDesk 2050](imagem.png)
